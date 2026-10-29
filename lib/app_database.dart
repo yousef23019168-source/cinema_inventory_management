@@ -53,7 +53,7 @@ class AppDatabase {
     );
   }
 
-  // ---------------- المعدات ----------------
+  // ---------------- Equipment ----------------
 
   Future<int> insertEquipment(Equipment e) async {
     final d = await db;
@@ -65,7 +65,7 @@ class AppDatabase {
     await d.update('equipment', e.toMap(), where: 'id = ?', whereArgs: [e.id]);
   }
 
-  /// مع حساب حالة "خارجة" من الإيجارات المفتوحة
+  /// Includes the "is out" status, computed from open rentals
   static const _selectWithStatus = '''
     SELECT e.*,
       EXISTS(
@@ -101,9 +101,9 @@ class AppDatabase {
     return rows.isNotEmpty;
   }
 
-  // ---------------- الخروج والرجوع ----------------
+  // ---------------- Check out / Check in ----------------
 
-  /// تسجيل خروج معدة. بيرمي Exception لو المعدة خارجة بالفعل.
+  /// Checks out a piece of equipment. Throws if it is already checked out.
   Future<int> checkOut({
     required int equipmentId,
     required String customer,
@@ -118,7 +118,7 @@ class AppDatabase {
         limit: 1,
       );
       if (open.isNotEmpty) {
-        throw StateError('المعدة دي خارجة بالفعل');
+        throw StateError('This equipment is already checked out');
       }
       final eq = await txn.query(
         'equipment',
@@ -126,7 +126,7 @@ class AppDatabase {
         whereArgs: [equipmentId],
         limit: 1,
       );
-      if (eq.isEmpty) throw StateError('المعدة غير موجودة');
+      if (eq.isEmpty) throw StateError('Equipment not found');
 
       return txn.insert('rentals', {
         'equipment_id': equipmentId,
@@ -140,8 +140,9 @@ class AppDatabase {
     });
   }
 
-  /// تسجيل رجوع معدة وحساب الإجمالي (أي جزء من اليوم = يوم كامل، والحد الأدنى يوم).
-  /// بيرجع الإيجار بعد التحديث، وبيرمي Exception لو المعدة مش خارجة.
+  /// Checks equipment back in and calculates the total
+  /// (any part of a day counts as a full day, minimum one day).
+  /// Returns the updated rental. Throws if the equipment is not checked out.
   Future<Rental> checkIn(int equipmentId) async {
     final d = await db;
     return d.transaction((txn) async {
@@ -151,7 +152,7 @@ class AppDatabase {
         whereArgs: [equipmentId],
         limit: 1,
       );
-      if (rows.isEmpty) throw StateError('المعدة دي مش خارجة');
+      if (rows.isEmpty) throw StateError('This equipment is not checked out');
 
       final rental = Rental.fromMap(rows.first);
       final now = DateTime.now();
@@ -190,7 +191,7 @@ class AppDatabase {
     return rows.map(Rental.fromMap).toList();
   }
 
-  // ---------------- الملخص ----------------
+  // ---------------- Summary ----------------
 
   Future<InventoryStats> getStats() async {
     final d = await db;

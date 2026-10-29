@@ -1,44 +1,55 @@
+/// One piece of gear. The [code] is the primary key (and what the QR label holds).
 class Equipment {
-  final int? id;
+  final String code;
   final String name;
-  final String code; // الكود اللي هيتحط في QR
   final String category;
   final double dailyRate;
   final String notes;
   final DateTime createdAt;
 
-  /// بتتحسب من قاعدة البيانات (فيه إيجار مفتوح ولا لأ)
+  /// Currently rented out?
   final bool isOut;
 
+  /// Expected return date while the item is out.
+  final DateTime? dueDate;
+
   const Equipment({
-    this.id,
-    required this.name,
     required this.code,
-    this.category = '',
+    required this.name,
+    required this.category,
     required this.dailyRate,
     this.notes = '',
     required this.createdAt,
     this.isOut = false,
+    this.dueDate,
   });
 
+  bool get isLate =>
+      isOut && dueDate != null && DateTime.now().isAfter(dueDate!);
+
+  String get id => code;
+
   Map<String, Object?> toMap() => {
-    'id': id,
-    'name': name,
     'code': code,
+    'name': name,
     'category': category,
     'daily_rate': dailyRate,
     'notes': notes,
     'created_at': createdAt.toIso8601String(),
+    'is_out': isOut ? 1 : 0,
+    'due_date': dueDate?.toIso8601String(),
   };
 
   factory Equipment.fromMap(Map<String, Object?> m) => Equipment(
-    id: m['id'] as int,
-    name: m['name'] as String,
     code: m['code'] as String,
-    category: (m['category'] as String?) ?? '',
-    dailyRate: (m['daily_rate'] as num).toDouble(),
+    name: (m['name'] as String?) ?? '',
+    category: (m['category'] as String?) ?? 'Other',
+    dailyRate: ((m['daily_rate'] as num?) ?? 0).toDouble(),
     notes: (m['notes'] as String?) ?? '',
     createdAt: DateTime.parse(m['created_at'] as String),
     isOut: ((m['is_out'] as int?) ?? 0) == 1,
+    dueDate: m['due_date'] == null
+        ? null
+        : DateTime.parse(m['due_date'] as String),
   );
 }

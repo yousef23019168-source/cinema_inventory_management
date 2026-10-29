@@ -1,30 +1,37 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cinema_inventory/main.dart';
+import 'package:cinema_inventory/equipment.dart';
+
+Equipment _item({bool isOut = false, DateTime? dueDate}) => Equipment(
+  code: 'EQ-TEST01',
+  name: 'Test camera',
+  category: 'Camera',
+  dailyRate: 100,
+  createdAt: DateTime(2025, 1, 1),
+  isOut: isOut,
+  dueDate: dueDate,
+);
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('Equipment.isLate', () {
+    test('is false when the item is in stock', () {
+      expect(_item().isLate, isFalse);
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('is false when out and not yet due', () {
+      final e = _item(
+        isOut: true,
+        dueDate: DateTime.now().add(const Duration(days: 2)),
+      );
+      expect(e.isLate, isFalse);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('is true when out and past the due date', () {
+      final e = _item(
+        isOut: true,
+        dueDate: DateTime.now().subtract(const Duration(days: 1)),
+      );
+      expect(e.isLate, isTrue);
+    });
   });
 }
